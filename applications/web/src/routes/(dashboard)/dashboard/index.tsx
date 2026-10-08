@@ -1,4 +1,5 @@
 import { useState, useTransition } from "react";
+import { useAtom } from "jotai";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import useSWR, { preload, useSWRConfig } from "swr";
 import { AnimatedReveal } from "@/components/ui/primitives/animated-reveal";
@@ -39,6 +40,7 @@ import {
 } from "@/components/ui/composites/navigation-menu/navigation-menu-items";
 import { NavigationMenuPopover } from "@/components/ui/composites/navigation-menu/navigation-menu-popover";
 import { Text } from "@/components/ui/primitives/text";
+import { CheckboxIndicator } from "@/components/ui/primitives/checkbox";
 import { ProviderIconStack } from "@/components/ui/primitives/provider-icon-stack";
 import { pluralize } from "@/lib/pluralize";
 import { useAnimatedSWR } from "@/hooks/use-animated-swr";
@@ -50,6 +52,11 @@ import CreditCard from "lucide-react/dist/esm/icons/credit-card";
 import Sparkles from "lucide-react/dist/esm/icons/sparkles";
 import { useSubscription, fetchSubscriptionStateWithApi } from "@/hooks/use-subscription";
 import { openCustomerPortal } from "@/utils/checkout";
+import {
+  hiddenCalendarIdsAtom,
+  isCalendarVisible,
+  setCalendarVisible,
+} from "@/state/calendar-visibility";
 
 async function loadSubscription(context: {
   fetchApi: <T>(path: string, init?: RequestInit) => Promise<T>;
@@ -238,11 +245,20 @@ function AttentionDot() {
 
 function CalendarsMenu() {
   const reauthIds = new Set(useReauthAccounts().map((account) => account.id));
+  const [hiddenCalendarIds, setHiddenCalendarIds] = useAtom(hiddenCalendarIdsAtom);
   const { data: calendarsData, shouldAnimate: animateCalendars, isLoading: calendarsLoading, error, mutate: mutateCalendars } = useAnimatedSWR<CalendarSource[]>("/api/sources");
   const calendars = calendarsData ?? [];
+  const visibleCalendars = calendars.filter((calendar) =>
+    isCalendarVisible(hiddenCalendarIds, calendar.id),
+  );
+  const hasHiddenCalendars = visibleCalendars.length < calendars.length;
 
   const { data: eventCountData, error: eventCountError } = useSWR<{ count: number }>("/api/events/count");
-  const eventCount = eventCountError ? undefined : eventCountData?.count;
+  const eventCount = eventCountError || hasHiddenCalendars ? undefined : eventCountData?.count;
+
+  const handleCalendarVisibilityChange = (calendarId: string, visible: boolean) => {
+    setHiddenCalendarIds((current) => setCalendarVisible(current, calendarId, visible));
+  };
 
   return (
     <NavigationMenu>
@@ -258,7 +274,7 @@ function CalendarsMenu() {
             </NavigationMenuItemLabel>
             <NavigationMenuItemTrailing>
               <ProviderIconStack
-                providers={calendars}
+                providers={visibleCalendars}
                 leading={
                   calendars.some((calendar) => reauthIds.has(calendar.accountId))
                     ? <AttentionDot />
@@ -269,49 +285,71 @@ function CalendarsMenu() {
           </>
         }
       >
+        {!calendarsLoading && !error && calendars.length > 0 && (
+          <div className="px-3.5 pb-2 pt-3 sm:px-3">
+            <Text size="xs" tone="muted">
+              Tick the calendars you want to see. Syncing is not affected.
+            </Text>
+          </div>
+        )}
         {error && <ErrorState message="Failed to load calendars." onRetry={() => mutateCalendars()} />}
         {calendarsLoading && (
           <div className="flex justify-center py-4">
             <LoaderCircle size={16} className="animate-spin text-foreground-muted" />
           </div>
         )}
-        {calendars.map((calendar) => (
-          <NavigationMenuLinkItem
-            key={calendar.id}
-            to={`/dashboard/accounts/${calendar.accountId}/${calendar.id}`}
-            onMouseEnter={() => {
-              preload(`/api/accounts/${calendar.accountId}`, fetcher);
-              preload(`/api/sources/${calendar.id}`, fetcher);
-            }}
-          >
-            <NavigationMenuItemIcon>
-              <ProviderIcon provider={calendar.provider} calendarType={calendar.calendarType} />
-            </NavigationMenuItemIcon>
-            <NavigationMenuItemLabel
-              className="shrink-0"
-              tone={reauthIds.has(calendar.accountId) ? "attention" : undefined}
-            >
-              {calendar.name}
-            </NavigationMenuItemLabel>
-            <NavigationMenuItemTrailing
-              className="overflow-hidden"
-              indicator={
-                reauthIds.has(calendar.accountId)
-                  ? <TriangleAlert size={15} className="shrink-0 text-attention" />
-                  : undefined
-              }
-            >
-              <Text
-                size="sm"
-                tone={reauthIds.has(calendar.accountId) ? "attention" : "muted"}
-                align="right"
-                className="flex-1 min-w-0 truncate"
+        {calendars.map((calendar) => {
+          const visible = isCalendarVisible(hiddenCalendarIds, calendar.id);
+          return (
+            <div key={calendar.id} className="relative">
+              <button
+                type="button"
+                role="checkbox"
+                aria-checked={visible}
+                aria-label={`${visible ? "Hide" : "Show"} ${calendar.name}`}
+                onClick={() => handleCalendarVisibilityChange(calendar.id, !visible)}
+                className="absolute left-3 top-1/2 z-10 -translate-y-1/2 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
-                {calendar.unavailableSince ? "Unavailable" : calendar.accountLabel}
-              </Text>
-            </NavigationMenuItemTrailing>
-          </NavigationMenuLinkItem>
-        ))}
+                <CheckboxIndicator checked={visible} />
+              </button>
+              <NavigationMenuLinkItem
+                to={`/dashboard/accounts/${calendar.accountId}/${calendar.id}`}
+                className="pl-10"
+                onMouseEnter={() => {
+                  preload(`/api/accounts/${calendar.accountId}`, fetcher);
+                  preload(`/api/sources/${calendar.id}`, fetcher);
+                }}
+              >
+                <NavigationMenuItemIcon>
+                  <ProviderIcon provider={calendar.provider} calendarType={calendar.calendarType} />
+                </NavigationMenuItemIcon>
+                <NavigationMenuItemLabel
+                  className="shrink-0"
+                  tone={reauthIds.has(calendar.accountId) ? "attention" : undefined}
+                >
+                  {calendar.name}
+                </NavigationMenuItemLabel>
+                <NavigationMenuItemTrailing
+                  className="overflow-hidden"
+                  indicator={
+                    reauthIds.has(calendar.accountId)
+                      ? <TriangleAlert size={15} className="shrink-0 text-attention" />
+                      : undefined
+                  }
+                >
+                  <Text
+                    size="sm"
+                    tone={reauthIds.has(calendar.accountId) ? "attention" : "muted"}
+                    align="right"
+                    className="flex-1 min-w-0 truncate"
+                  >
+                    {calendar.unavailableSince ? "Unavailable" : calendar.accountLabel}
+                  </Text>
+                </NavigationMenuItemTrailing>
+              </NavigationMenuLinkItem>
+            </div>
+          );
+        })}
       </NavigationMenuPopover>
       <AnimatedReveal show={calendars.length > 0} skipInitial={!animateCalendars}>
         <NavigationMenuLinkItem to="/dashboard/events">

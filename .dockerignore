@@ -4,5 +4,6 @@ dist
 .turbo
 .git
 *.log
+*.tar
 .env*
 !.env.template

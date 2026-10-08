@@ -1,0 +1,3 @@
+services:
+  keeper:
+    image: keeper-custom:calendar-filter

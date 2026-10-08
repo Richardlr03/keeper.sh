@@ -20,6 +20,7 @@ import { Text } from "@/components/ui/primitives/text";
 import { useStartOfToday } from "@/hooks/use-start-of-today";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import type { ApiEventSummary } from "@/types/api";
+import { hiddenCalendarIdsAtom, isCalendarVisible } from "@/state/calendar-visibility";
 import { addDays, startOfDay } from "./calendar-helpers";
 import { periodFill, resolvePeriod } from "./density-period";
 import type { Period } from "./density-period";
@@ -322,9 +323,13 @@ function EventGraphBars({ days, shouldAnimate }: EventGraphBarsProps) {
 
 export function EventGraph() {
   const todayStart = useStartOfToday();
+  const hiddenCalendarIds = useAtomValue(hiddenCalendarIdsAtom);
   const graphUrl = buildGraphUrl(todayStart);
   const { data: events, shouldAnimate } = useAnimatedSWR<ApiEventSummary[]>(graphUrl, { fetcher });
-  const days = buildDays(events ?? [], todayStart);
+  const visibleEvents = (events ?? []).filter((event) =>
+    isCalendarVisible(hiddenCalendarIds, event.calendarId),
+  );
+  const days = buildDays(visibleEvents, todayStart);
 
   return (
     <LazyMotion features={loadMotionFeatures}>

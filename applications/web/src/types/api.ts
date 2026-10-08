@@ -91,4 +91,5 @@ export interface ApiEvent {
 export interface ApiEventSummary {
   id: string;
   startTime: string;
+  calendarId: string;
 }

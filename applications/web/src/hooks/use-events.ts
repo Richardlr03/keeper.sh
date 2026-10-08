@@ -1,6 +1,9 @@
+import { useMemo } from "react";
+import { useAtomValue } from "jotai";
 import useSWR from "swr";
 import useSWRInfinite from "swr/infinite";
 import { fetcher } from "@/lib/fetcher";
+import { filterVisibleCalendarItems, hiddenCalendarIdsAtom } from "@/state/calendar-visibility";
 import { useStartOfToday } from "./use-start-of-today";
 import type { ApiEvent } from "@/types/api";
 
@@ -51,6 +54,7 @@ const fetchEvents = async (url: string): Promise<CalendarEvent[]> => {
 
 export function useEvents() {
   const todayStart = useStartOfToday();
+  const hiddenCalendarIds = useAtomValue(hiddenCalendarIdsAtom);
 
   const getKey = (pageIndex: number): string => {
     const from = new Date(todayStart);
@@ -69,7 +73,11 @@ export function useEvents() {
     { revalidateFirstPage: false, keepPreviousData: true },
   );
 
-  const events = resolveEvents(data);
+  const allEvents = resolveEvents(data);
+  const events = useMemo(
+    () => filterVisibleCalendarItems(allEvents, hiddenCalendarIds),
+    [allEvents, hiddenCalendarIds],
+  );
   const hasMore = !data || (data[data.length - 1]?.length ?? 0) > 0;
 
   const loadMore = () => {
@@ -91,12 +99,17 @@ interface EventsInRange {
 }
 
 export function useEventsInRange(start: Date, end: Date): EventsInRange {
+  const hiddenCalendarIds = useAtomValue(hiddenCalendarIdsAtom);
   const url = buildEventsUrl(start, new Date(end.getTime() - INCLUSIVE_END_MS));
   const { data, error, isLoading } = useSWR<CalendarEvent[], Error>(url, fetchEvents, {
     keepPreviousData: true,
   });
+  const events = useMemo(
+    () => filterVisibleCalendarItems(data ?? NO_EVENTS, hiddenCalendarIds),
+    [data, hiddenCalendarIds],
+  );
 
-  return { events: data ?? NO_EVENTS, error, isLoading };
+  return { events, error, isLoading };
 }
 
 const deduplicateEvents = (events: CalendarEvent[]): CalendarEvent[] => [
