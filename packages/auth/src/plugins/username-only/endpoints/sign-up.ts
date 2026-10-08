@@ -24,6 +24,18 @@ const createSignUpEndpoint = (config: UsernameOnlyConfig) =>
     async (context) => {
       const { username, password, name } = context.body;
 
+      if (!config.registrationEnabled) {
+        throw new APIError("FORBIDDEN", {
+          message: "registration is disabled",
+        });
+      }
+
+      if (config.allowedUsername && username !== config.allowedUsername) {
+        throw new APIError("FORBIDDEN", {
+          message: "registration is disabled",
+        });
+      }
+
       const existingUser = await context.context.adapter.findOne<User>({
         model: "user",
         where: [{ field: "username", value: username }],

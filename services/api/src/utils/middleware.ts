@@ -5,7 +5,7 @@ import { apiTokensTable } from "@keeper.sh/database/schema";
 import { isApiToken, hashApiToken } from "./api-tokens";
 import { user as userTable } from "@keeper.sh/database/auth-schema";
 import { eq } from "drizzle-orm";
-import { auth, database, premiumService, redis } from "@/context";
+import { auth, database, env, premiumService, redis } from "@/context";
 import { checkAndIncrementApiUsage } from "./api-rate-limit";
 import { context, widelog } from "./logging";
 import { labelFailure } from "./error-labelling";
@@ -90,6 +90,20 @@ const getSession = async (request: Request): Promise<Session | null> => {
   return session;
 };
 
+const isAllowedUserId = async (userId: string): Promise<boolean> => {
+  if (!env.SINGLE_USER_USERNAME) {
+    return true;
+  }
+
+  const [owner] = await database
+    .select({ id: userTable.id })
+    .from(userTable)
+    .where(eq(userTable.username, env.SINGLE_USER_USERNAME))
+    .limit(1);
+
+  return owner?.id === userId;
+};
+
 const withWideEvent =
   (handler: RouteCallback): RouteHandler =>
   (request, params, routePattern) =>
@@ -131,7 +145,7 @@ const withAuth =
     const session = await widelog.time.measure("auth.duration_ms", () => getSession(request));
     widelog.set("auth.method", "session");
 
-    if (!session?.user?.id) {
+    if (!session?.user?.id || !(await isAllowedUserId(session.user.id))) {
       return ErrorResponse.unauthorized().toResponse();
     }
 
@@ -194,7 +208,7 @@ const withV1Auth =
         );
         widelog.set("auth.method", "api_token");
 
-        if (!userId) {
+        if (!userId || !(await isAllowedUserId(userId))) {
           return ErrorResponse.unauthorized().toResponse();
         }
 
@@ -213,7 +227,7 @@ const withV1Auth =
         );
         widelog.set("auth.method", "mcp_token");
 
-        if (!mcpSession?.userId) {
+        if (!mcpSession?.userId || !(await isAllowedUserId(mcpSession.userId))) {
           return ErrorResponse.unauthorized().toResponse();
         }
 
@@ -229,7 +243,7 @@ const withV1Auth =
     const session = await widelog.time.measure("auth.duration_ms", () => getSession(request));
     widelog.set("auth.method", "session");
 
-    if (!session?.user?.id) {
+    if (!session?.user?.id || !(await isAllowedUserId(session.user.id))) {
       return ErrorResponse.unauthorized().toResponse();
     }
 

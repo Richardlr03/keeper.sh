@@ -104,6 +104,7 @@ beforeAll(async () => {
 const capabilities: AuthCapabilities = {
   commercialMode: true,
   credentialMode: "email",
+  registrationEnabled: true,
   requiresEmailVerification: true,
   socialProviders: {
     google: false,
@@ -149,6 +150,17 @@ describe("AuthForm", () => {
 
     expect(markup).toContain('name="password"');
     expect(markup).toContain('autoComplete="current-password"');
+  });
+
+  it("hides the registration prompt when registration is disabled", () => {
+    const markup = renderToStaticMarkup(
+      <AuthForm
+        capabilities={{ ...capabilities, registrationEnabled: false }}
+        copy={copy}
+      />,
+    );
+
+    expect(markup).not.toContain("Register");
   });
 
   it("uses conventional field ids, names, and labels for sign-in heuristics", () => {

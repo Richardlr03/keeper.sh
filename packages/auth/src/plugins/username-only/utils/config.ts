@@ -1,13 +1,23 @@
 interface UsernameOnlyOptions {
+  allowedUsername?: string;
+  registrationEnabled?: boolean;
   minUsernameLength?: number;
   maxUsernameLength?: number;
   minPasswordLength?: number;
   maxPasswordLength?: number;
 }
 
-type UsernameOnlyConfig = Required<UsernameOnlyOptions>;
+interface UsernameOnlyConfig {
+  allowedUsername?: string;
+  registrationEnabled: boolean;
+  minUsernameLength: number;
+  maxUsernameLength: number;
+  minPasswordLength: number;
+  maxPasswordLength: number;
+}
 
 const defaultOptions: UsernameOnlyConfig = {
+  registrationEnabled: true,
   maxPasswordLength: 128,
   maxUsernameLength: 32,
   minPasswordLength: 8,

@@ -135,12 +135,14 @@ export function AuthForm({
       />
       <div className="flex flex-col gap-1.5">
         <AuthError />
-        <AuthSwitchPrompt>
-          {copy.switchPrompt}{" "}
-          <ExternalTextLink href={switchHref}>
-            {copy.switchCta}
-          </ExternalTextLink>
-        </AuthSwitchPrompt>
+        {(copy.action === "signUp" || capabilities.registrationEnabled) && (
+          <AuthSwitchPrompt>
+            {copy.switchPrompt}{" "}
+            <ExternalTextLink href={switchHref}>
+              {copy.switchCta}
+            </ExternalTextLink>
+          </AuthSwitchPrompt>
+        )}
       </div>
     </>
   );

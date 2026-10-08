@@ -9,6 +9,7 @@ interface ResolveAuthCapabilitiesConfig {
   microsoftClientSecret?: string;
   passkeyRpId?: string;
   passkeyOrigin?: string;
+  singleUserUsername?: string;
 }
 
 const hasOAuthCredentials = (clientId?: string, clientSecret?: string): boolean =>
@@ -26,14 +27,17 @@ const resolveCredentialMode = (
 
 const resolveAuthCapabilities = (
   config: ResolveAuthCapabilitiesConfig,
-): AuthCapabilities =>
-  authCapabilitiesSchema.assert({
+): AuthCapabilities => {
+  const singleUserMode = Boolean(config.singleUserUsername);
+
+  return authCapabilitiesSchema.assert({
     commercialMode: config.commercialMode ?? false,
     credentialMode: resolveCredentialMode(config.commercialMode),
+    registrationEnabled: !singleUserMode,
     requiresEmailVerification: config.commercialMode ?? false,
     socialProviders: {
-      google: hasOAuthCredentials(config.googleClientId, config.googleClientSecret),
-      microsoft: hasOAuthCredentials(config.microsoftClientId, config.microsoftClientSecret),
+      google: !singleUserMode && hasOAuthCredentials(config.googleClientId, config.googleClientSecret),
+      microsoft: !singleUserMode && hasOAuthCredentials(config.microsoftClientId, config.microsoftClientSecret),
     },
     supportsChangePassword: true,
     supportsPasskeys: Boolean(
@@ -41,6 +45,7 @@ const resolveAuthCapabilities = (
     ),
     supportsPasswordReset: config.commercialMode ?? false,
   });
+};
 
 export { resolveAuthCapabilities };
 export type { ResolveAuthCapabilitiesConfig };

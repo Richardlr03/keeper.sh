@@ -9,6 +9,7 @@ import {
 const emailCapabilities: AuthCapabilities = {
   commercialMode: true,
   credentialMode: "email",
+  registrationEnabled: true,
   requiresEmailVerification: true,
   socialProviders: {
     google: true,

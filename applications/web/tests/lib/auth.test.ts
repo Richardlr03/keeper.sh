@@ -22,6 +22,7 @@ let signUpWithCredential: typeof import("../../src/lib/auth").signUpWithCredenti
 const commercialCapabilities: AuthCapabilities = {
   commercialMode: true,
   credentialMode: "email",
+  registrationEnabled: true,
   requiresEmailVerification: true,
   socialProviders: {
     google: false,

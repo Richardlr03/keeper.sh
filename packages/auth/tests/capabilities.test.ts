@@ -16,6 +16,7 @@ describe("resolveAuthCapabilities", () => {
     expect(capabilities).toEqual({
       commercialMode: false,
       credentialMode: "username",
+      registrationEnabled: true,
       requiresEmailVerification: false,
       socialProviders: {
         google: true,
@@ -41,6 +42,7 @@ describe("resolveAuthCapabilities", () => {
     expect(capabilities).toEqual({
       commercialMode: true,
       credentialMode: "email",
+      registrationEnabled: true,
       requiresEmailVerification: true,
       socialProviders: {
         google: true,
@@ -49,6 +51,23 @@ describe("resolveAuthCapabilities", () => {
       supportsChangePassword: true,
       supportsPasskeys: true,
       supportsPasswordReset: true,
+    });
+  });
+
+  it("disables registration and social login in single-user mode", () => {
+    const capabilities = resolveAuthCapabilities({
+      commercialMode: false,
+      googleClientId: "google-client-id",
+      googleClientSecret: "google-client-secret",
+      microsoftClientId: "microsoft-client-id",
+      microsoftClientSecret: "microsoft-client-secret",
+      singleUserUsername: "Richard",
+    });
+
+    expect(capabilities).toMatchObject({
+      credentialMode: "username",
+      registrationEnabled: false,
+      socialProviders: { google: false, microsoft: false },
     });
   });
 });

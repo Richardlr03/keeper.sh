@@ -2,12 +2,13 @@ import { createAuthEndpoint } from "better-auth/api";
 import { APIError } from "better-call";
 import { object, string } from "zod";
 import type { CredentialAccount, User } from "../types";
+import type { UsernameOnlyConfig } from "../utils/config";
 
 const INVALID_CREDENTIALS_ERROR = {
   message: "invalid username or password",
 };
 
-const createSignInEndpoint = () =>
+const createSignInEndpoint = (config: UsernameOnlyConfig) =>
   createAuthEndpoint(
     "/username-only/sign-in",
     {
@@ -19,6 +20,10 @@ const createSignInEndpoint = () =>
     },
     async (context) => {
       const { username, password } = context.body;
+
+      if (config.allowedUsername && username !== config.allowedUsername) {
+        throw new APIError("UNAUTHORIZED", INVALID_CREDENTIALS_ERROR);
+      }
 
       const user = await context.context.adapter.findOne<User>({
         model: "user",

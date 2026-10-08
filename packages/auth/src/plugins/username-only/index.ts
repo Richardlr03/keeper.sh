@@ -10,7 +10,7 @@ const usernameOnly = (options?: UsernameOnlyOptions): BetterAuthPlugin => {
 
   return {
     endpoints: {
-      signInUsername: createSignInEndpoint(),
+      signInUsername: createSignInEndpoint(config),
       signUpUsername: createSignUpEndpoint(config),
     },
     id: "username-only",

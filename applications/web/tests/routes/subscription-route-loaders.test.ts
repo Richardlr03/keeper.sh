@@ -18,6 +18,7 @@ const CAPABILITIES_PATH = "/api/auth/capabilities";
 const capabilitiesBody = {
   commercialMode: true,
   credentialMode: "email",
+  registrationEnabled: true,
   requiresEmailVerification: true,
   socialProviders: { google: true, microsoft: false },
   supportsChangePassword: true,

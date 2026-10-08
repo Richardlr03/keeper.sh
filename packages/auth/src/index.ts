@@ -59,6 +59,7 @@ interface AuthConfig {
   microsoftClientId?: string;
   microsoftClientSecret?: string;
   resendApiKey?: string;
+  singleUserUsername?: string;
   passkeyRpId?: string;
   passkeyRpName?: string;
   passkeyOrigin?: string;
@@ -148,6 +149,7 @@ const createAuth = (config: AuthConfig) => {
     microsoftClientId,
     microsoftClientSecret,
     resendApiKey,
+    singleUserUsername,
     passkeyRpId,
     passkeyRpName,
     passkeyOrigin,
@@ -172,12 +174,16 @@ const createAuth = (config: AuthConfig) => {
     microsoftClientSecret,
     passkeyOrigin,
     passkeyRpId,
+    singleUserUsername,
   });
 
   const plugins: BetterAuthPlugin[] = [];
 
   if (!commercialMode) {
-    plugins.push(usernameOnly());
+    plugins.push(usernameOnly({
+      allowedUsername: singleUserUsername,
+      registrationEnabled: !singleUserUsername,
+    }));
   }
 
   const buildPolarClient = (): Polar | null => {
@@ -238,7 +244,7 @@ const createAuth = (config: AuthConfig) => {
 
   const socialProviders: Parameters<typeof betterAuth>[0]["socialProviders"] = {};
 
-  if (googleClientId && googleClientSecret) {
+  if (!singleUserUsername && googleClientId && googleClientSecret) {
     socialProviders.google = {
       accessType: "offline",
       clientId: googleClientId,
@@ -248,7 +254,7 @@ const createAuth = (config: AuthConfig) => {
     };
   }
 
-  if (microsoftClientId && microsoftClientSecret) {
+  if (!singleUserUsername && microsoftClientId && microsoftClientSecret) {
     socialProviders.microsoft = {
       clientId: microsoftClientId,
       clientSecret: microsoftClientSecret,

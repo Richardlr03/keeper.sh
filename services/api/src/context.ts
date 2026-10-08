@@ -75,6 +75,7 @@ const { auth, capabilities: authCapabilities } = createAuth({
   microsoftClientId: env.MICROSOFT_CLIENT_ID,
   microsoftClientSecret: env.MICROSOFT_CLIENT_SECRET,
   resendApiKey: env.RESEND_API_KEY,
+  singleUserUsername: env.SINGLE_USER_USERNAME,
   passkeyRpId: env.PASSKEY_RP_ID,
   passkeyRpName: env.PASSKEY_RP_NAME,
   passkeyOrigin: env.PASSKEY_ORIGIN,

@@ -8,6 +8,11 @@ import { labelFailure } from "@/utils/error-labelling";
 const COMPANION_COOKIE_NAME = "keeper.has_session";
 const COMPANION_COOKIE_SET = `${COMPANION_COOKIE_NAME}=1; Path=/; SameSite=Lax`;
 const COMPANION_COOKIE_CLEAR = `${COMPANION_COOKIE_NAME}=; Path=/; Max-Age=0; SameSite=Lax`;
+const SINGLE_USER_DISABLED_PATHS = new Set([
+  "/api/auth/sign-in/social",
+  "/api/auth/sign-up/email",
+  "/api/auth/username-only/sign-up",
+]);
 
 const isNullSession = (body: unknown): body is null | { session: null } => {
   if (body === null) {
@@ -130,6 +135,30 @@ const prepareUnauthenticatedRegisterRequest = async (
 const processAuth = async (pathname: string, request: Request): Promise<Response> => {
   if (pathname === "/api/auth/capabilities") {
     return Response.json(authCapabilities);
+  }
+
+  if (env.SINGLE_USER_USERNAME && SINGLE_USER_DISABLED_PATHS.has(pathname)) {
+    return Response.json(
+      { message: "Registration and social sign-in are disabled for this private deployment." },
+      { status: 403 },
+    );
+  }
+
+  if (env.SINGLE_USER_USERNAME) {
+    const session = await auth.api.getSession({ headers: request.headers });
+    let username: unknown = null;
+    if (session?.user && "username" in session.user) {
+      const { username: sessionUsername } = session.user;
+      username = sessionUsername;
+    }
+
+    if (session?.user && username !== env.SINGLE_USER_USERNAME) {
+      let response = Response.json({ message: "Unauthorized" }, { status: 401 });
+      if (pathname === "/api/auth/get-session") {
+        response = Response.json(null);
+      }
+      return clearSessionCookies(response);
+    }
   }
 
   if (hasOAuthProviderApi(auth.api)) {

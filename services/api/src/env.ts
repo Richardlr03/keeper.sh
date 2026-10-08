@@ -23,6 +23,7 @@ const schema = {
   POLAR_WEBHOOK_SECRET: "string?",
   REDIS_URL: "string.url",
   RESEND_API_KEY: "string?",
+  SINGLE_USER_USERNAME: "string?",
   PRIVATE_RESOLUTION_WHITELIST: "string?",
   BLOCK_PRIVATE_RESOLUTION: "boolean?",
   TRUSTED_ORIGINS: "string?",
